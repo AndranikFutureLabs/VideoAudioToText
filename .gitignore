@@ -1,0 +1,11 @@
+node_modules/
+out/
+dist/
+temp/
+output/
+*.log
+.DS_Store
+resources/ffmpeg
+resources/ffprobe
+resources/ffmpeg.exe
+resources/ffprobe.exe
