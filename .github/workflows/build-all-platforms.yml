@@ -1,0 +1,179 @@
+name: Build All Platforms
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            platform: mac
+            artifact_name: VideoAudioToText-macOS
+          - os: macos-14
+            platform: mac-arm
+            artifact_name: VideoAudioToText-macOS-ARM
+          - os: ubuntu-22.04
+            platform: linux
+            artifact_name: VideoAudioToText-Linux
+          - os: windows-latest
+            platform: win
+            artifact_name: VideoAudioToText-Windows
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install FFmpeg (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          which ffmpeg ffprobe
+
+      - name: Install FFmpeg (macOS)
+        if: matrix.platform == 'mac' || matrix.platform == 'mac-arm'
+        run: |
+          brew install ffmpeg
+          which ffmpeg ffprobe
+
+      - name: Download FFmpeg binaries to resources (Windows)
+        if: matrix.platform == 'win'
+        shell: bash
+        run: |
+          mkdir -p resources
+          curl -L -o ff.zip https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
+          7z x ff.zip -o/tmp/ff
+          FF_BIN=$(find /tmp/ff -name 'ffmpeg.exe' | head -1)
+          FP_BIN=$(find /tmp/ff -name 'ffprobe.exe' | head -1)
+          cp "$FF_BIN" resources/ffmpeg.exe
+          cp "$FP_BIN" resources/ffprobe.exe
+          ls -la resources/ffmpeg.exe resources/ffprobe.exe
+
+      - name: Copy FFmpeg binaries to resources (macOS/Linux)
+        if: matrix.platform == 'linux' || matrix.platform == 'mac' || matrix.platform == 'mac-arm'
+        shell: bash
+        run: |
+          mkdir -p resources
+          cp "$(which ffmpeg)" resources/ffmpeg 2>/dev/null || true
+          cp "$(which ffprobe)" resources/ffprobe 2>/dev/null || true
+          chmod +x resources/ffmpeg resources/ffprobe 2>/dev/null || true
+          ls -la resources/ffmpeg resources/ffprobe 2>/dev/null || echo "FFmpeg not found in PATH"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install faster-whisper
+        continue-on-error: true
+
+      - name: Install Node.js dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npx electron-vite build
+
+      - name: Build macOS (x64 + arm64)
+        if: matrix.platform == 'mac' || matrix.platform == 'mac-arm'
+        run: npx electron-builder --mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          PYTHON_PATH: python3
+
+      - name: Build Linux
+        if: matrix.platform == 'linux'
+        run: npx electron-builder --linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Windows
+        if: matrix.platform == 'win'
+        run: npx electron-builder --win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.exe
+            dist/latest*.yml
+          if-no-files-found: warn
+          retention-days: 30
+
+  release:
+    name: Publish Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.exe' -o -name 'latest*.yml' \) -exec cp {} release/ \;
+          ls -lh release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: VideoAudioToText ${{ github.ref_name }}
+          body: |
+            ## VideoAudioToText ${{ github.ref_name }}
+
+            ### Что делает
+            - Извлечение звука из видео/аудио (MP4, AVI, MKV, MOV, WebM, MP3, WAV, M4A, OGG, FLAC)
+            - Распознавание речи (faster-whisper, CPU)
+            - Перевод на выбранный язык (Google Translate, по умолчанию — английский)
+            - Сохранение 4 файлов: исходный текст (SRT + TXT), перевод (SRT + TXT)
+
+            ### Downloads
+            - **Windows**: `.exe` installer (NSIS)
+            - **macOS Intel**: `.dmg`
+            - **macOS Apple Silicon**: `.dmg`
+            - **Linux**: `.AppImage` / `.deb`
+
+            ### Требования
+            - **FFmpeg** — встроен в сборку (Windows) или устанавливается системой (macOS/Linux)
+            - **Python 3.9+** с пакетом `faster-whisper` — приложение может установить автоматически
+          files: release/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
