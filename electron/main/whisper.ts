@@ -26,7 +26,7 @@ export function isWhisperDownloading(): boolean { return isDownloading }
 export function isWhisperCached(): boolean {
   const { existsSync } = require('fs')
   const { homedir } = require('os')
-  return existsSync(join(homedir(), '.cache', 'faster-whisper', 'medium'))
+  return existsSync(join(homedir(), '.cache', 'faster-whisper', 'small'))
 }
 
 export function isWhisperCacheValid(): boolean { return isWhisperCached() }
@@ -47,7 +47,7 @@ export function clearWhisperCache(): void {
 
 export function getWhisperCachePath(): string {
   const { homedir } = require('os')
-  return join(homedir(), '.cache', 'faster-whisper', 'medium')
+  return join(homedir(), '.cache', 'faster-whisper', 'small')
 }
 
 function killProcess(): void {
@@ -76,7 +76,7 @@ export async function loadWhisperModel(
     pendingReady.push({ resolve, reject })
     const script = getScriptPath()
     const cached = isWhisperCached()
-    onLog?.(cached ? '🔄 Запуск faster-whisper (модель из кэша)...' : '🔄 Загрузка faster-whisper (первая загрузка ~1.5 ГБ)...')
+    onLog?.(cached ? '🔄 Запуск faster-whisper (модель из кэша)...' : '🔄 Загрузка faster-whisper small (первая загрузка ~500 МБ)...')
 
     const pyCmd = getPythonCommand()
     const pyParts = pyCmd.split(' ')

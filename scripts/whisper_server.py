@@ -1,6 +1,11 @@
 import sys, json, os
 
+# Limit MKL/OMP threads BEFORE importing faster_whisper/ctranslate2
+# This prevents mkl_malloc: failed to allocate memory on machines with limited RAM
 os.environ.setdefault("PYTHONUNBUFFERED", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "2")
+os.environ.setdefault("OMP_NUM_THREADS", "2")
+os.environ.setdefault("CT2_CPU_THREADS", "2")
 
 from faster_whisper import WhisperModel
 
@@ -14,8 +19,8 @@ def write_msg(obj: dict):
 def load_model():
     global model
     try:
-        write_msg({"type": "log", "message": "Loading faster-whisper medium (CPU, int8)...", "id": 0})
-        model = WhisperModel("medium", device="cpu", compute_type="int8")
+        write_msg({"type": "log", "message": "Loading faster-whisper small (CPU, int8)...", "id": 0})
+        model = WhisperModel("small", device="cpu", compute_type="int8", cpu_threads=2, num_workers=1)
         write_msg({"type": "ready"})
     except Exception as e:
         import traceback
