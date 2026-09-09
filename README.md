@@ -1,5 +1,7 @@
 # VideoAudioToText
 
+![VideoAudioToText](Vadio-Audio-totext.png)
+
 Извлечение звука из видео/аудио, распознавание речи (Whisper) и перевод (Google Translate).
 
 ## Возможности
