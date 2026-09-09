@@ -14,7 +14,7 @@ win:
     - target: nsis
       arch:
         - x64
-  icon: resources/icon.png
+  icon: resources/icon.ico
   legalTrademarks: AndranikFutureLabs
 
 nsis:

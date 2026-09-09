@@ -11,6 +11,11 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 
 function createWindow() {
+  const devIcon = join(__dirname, '../../logo.jpg')
+  const prodIcon = join(process.resourcesPath || '', 'logo.jpg')
+  const iconPath = existsSync(devIcon) ? devIcon : prodIcon
+  const iconImage = nativeImage.createFromPath(iconPath)
+
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 750,
@@ -18,6 +23,7 @@ function createWindow() {
     minHeight: 600,
     title: 'VideoAudioToText',
     backgroundColor: '#111827',
+    icon: iconImage,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
