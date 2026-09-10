@@ -130,6 +130,9 @@ export async function runTranscriptionPipeline(
 
   const translated: Segment[] = []
   const isSameLang = detectedLang === targetLang
+  if (isSameLang) {
+    onLog(`  ⚠️ Язык оригинала и перевода совпадают (${detectedLang}). Перевод пропускается.`)
+  }
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i]
     let translatedText: string

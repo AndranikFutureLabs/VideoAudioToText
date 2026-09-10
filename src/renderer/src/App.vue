@@ -10,7 +10,7 @@ import AboutDialog from './components/AboutDialog.vue'
 
 const inputPath = ref<string | null>(null)
 const sourceLang = ref('auto')
-const targetLang = ref('en')
+const targetLang = ref('ru')
 const isRunning = ref(false)
 const isInitializing = ref(false)
 const progress = ref(0)
