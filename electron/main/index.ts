@@ -187,13 +187,20 @@ app.whenReady().then(() => {
   })
 
   setTimeout(async () => {
-    if (!getFfmpegPathSafe() || isWhisperReady()) return
-    const whisperCached = isWhisperCached()
-    if (whisperCached) {
-      send('pipeline:log', '✅ Модель в кэше. Нажмите «Загрузить модели» перед запуском.')
+    if (!getFfmpegPathSafe()) {
+      send('pipeline:log', '⚠️ FFmpeg не найден. Нажмите «Загрузить FFmpeg».')
       return
     }
-    send('pipeline:log', '🔄 Автозагрузка моделей...')
+    if (isWhisperReady()) return
+
+    const whisperCached = isWhisperCached()
+    if (!whisperCached) {
+      send('pipeline:log', 'ℹ️ Модель не в кэше. Нажмите «Загрузить модели» для первой загрузки (~500 МБ).')
+      return
+    }
+
+    // Модель в кэше — загружаем автоматически
+    send('pipeline:log', '🔄 Загрузка faster-whisper из кэша...')
     send('models:progress', 0.05)
     try {
       await ensureModels(
