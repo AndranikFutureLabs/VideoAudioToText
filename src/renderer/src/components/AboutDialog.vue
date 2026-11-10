@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
+
 const open = ref(false)
 
 function openLink(url: string) {
@@ -57,7 +59,7 @@ defineExpose({ show: () => { open.value = true } })
           <div class="border-t border-gray-700 my-3" />
 
           <div class="text-xs space-y-1 text-gray-400">
-            <p>Версия 1.0.0</p>
+            <p>Версия {{ appVersion }}</p>
             <p>Whisper · Google Translate</p>
           </div>
 

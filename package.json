@@ -1,7 +1,7 @@
 {
   "name": "video-audio-to-text",
-  "version": "1.0.6",
-  "description": "VideoAudioToText — извлечение звука из видео/аудио, распознавание речи и перевод на английский",
+  "version": "1.0.7",
+  "description": "VideoAudioToText вЂ” РёР·РІР»РµС‡РµРЅРёРµ Р·РІСѓРєР° РёР· РІРёРґРµРѕ/Р°СѓРґРёРѕ, СЂР°СЃРїРѕР·РЅР°РІР°РЅРёРµ СЂРµС‡Рё Рё РїРµСЂРµРІРѕРґ РЅР° Р°РЅРіР»РёР№СЃРєРёР№",
   "main": "./out/main/index.js",
   "author": {
     "name": "AndranikFutureLabs",
