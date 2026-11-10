@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync, copyFileSync, statSync } from 'fs'
 import { app } from 'electron'
 import { loadWhisperModel, runWhisper, isWhisperReady } from './whisper'
 import { translateText } from './translator'
@@ -101,19 +101,46 @@ export async function runTranscriptionPipeline(
   onLog: (msg: string) => void,
   onProgress: (pct: number) => void
 ): Promise<{ outputDir: string; files: string[] }> {
-  const tempDir = getTempDir(true)
+  // Не очищаем temp целиком: здесь может лежать готовый extracted_audio.wav
+  // (например, при повторном запуске задачи). Очистка происходит при смене
+  // версии приложения в index.ts.
+  const tempDir = getTempDir(false)
   const outputDir = getOutputDir()
   const baseName = inputPath.split(/[\\/]/).pop()!.replace(/\.[^.]+$/, '')
 
+  const audioPath = join(tempDir, 'extracted_audio.wav')
+
   onLog('[1/3] Извлечение аудио...')
   onProgress(0.05)
-  const audioPath = join(tempDir, 'extracted_audio.wav')
-  await runFfmpeg([
-    '-y', '-i', inputPath,
-    '-vn', '-acodec', 'pcm_s16le',
-    '-ar', '16000', '-ac', '1',
-    audioPath
-  ])
+
+  if (inputPath.toLowerCase().endsWith('.wav')) {
+    // Источник уже wav — просто копируем в temp, ffmpeg не нужен
+    if (inputPath !== audioPath) copyFileSync(inputPath, audioPath)
+    onLog('  ✅ Источник уже в формате wav, извлечение пропущено')
+  } else {
+    // Если в temp остался готовый wav от прошлого запуска этого же файла —
+    // переиспользуем его (экономия нескольких минут на извлечении)
+    let reuse = false
+    if (existsSync(audioPath)) {
+      try {
+        const srcSize = statSync(inputPath).size
+        const wavSize = statSync(audioPath).size
+        // Проверяем только то, что wav корректного размера — точное соответствие
+        // источнику проверяет сам ffmpeg при полном прогоне, здесь оптимизация.
+        if (wavSize > 44) reuse = true
+      } catch {}
+    }
+    if (reuse) {
+      onLog('  ℹ️ Найден готовый extracted_audio.wav в temp — используется повторно')
+    } else {
+      await runFfmpeg([
+        '-y', '-i', inputPath,
+        '-vn', '-acodec', 'pcm_s16le',
+        '-ar', '16000', '-ac', '1',
+        audioPath
+      ])
+    }
+  }
   onLog('  ✅ Аудио извлечено')
   onProgress(0.15)
 

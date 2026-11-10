@@ -173,12 +173,17 @@ export async function runWhisper(audioPath: string, language: string, onLog?: (m
 
   const msg: any = await new Promise((resolve, reject) => {
     const id = ++requestId
-    const timeout = setTimeout(() => {
-      if (pending.has(id)) { pending.delete(id); reject(new Error('Таймаут распознавания (>30 мин)')) }
-    }, 1800000)
+    // Фиксированный таймаут 30 минут убран: длинные аудио (несколько часов)
+    // на CPU транскрибируются дольше, и раньше задача «зависала».
+    // Вместо него — периодический heartbeat в лог и защита от мёртвого процесса:
+    // если питон-процесс умрёт, сработает обработчик pyProcess.on('exit')
+    // и отвергнет все pending-запросы.
+    const heartbeat = setInterval(() => {
+      onLog?.('  ⏳ Распознавание продолжается...')
+    }, 60000)
     pending.set(id, {
-      resolve: (val: any) => { clearTimeout(timeout); resolve(val) },
-      reject: (err: Error) => { clearTimeout(timeout); reject(err) },
+      resolve: (val: any) => { clearInterval(heartbeat); resolve(val) },
+      reject: (err: Error) => { clearInterval(heartbeat); reject(err) },
     })
     pyProcess!.stdin!.write(JSON.stringify({ type: 'transcribe', id, audio_path: audioPath, language }) + '\n')
   })
