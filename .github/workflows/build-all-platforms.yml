@@ -20,9 +20,6 @@ jobs:
           - os: macos-15-intel
             platform: mac
             artifact_name: VideoAudioToText-macOS
-          - os: macos-14
-            platform: mac-arm
-            artifact_name: VideoAudioToText-macOS-ARM
           - os: ubuntu-22.04
             platform: linux
             artifact_name: VideoAudioToText-Linux
@@ -155,23 +152,35 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: VideoAudioToText ${{ github.ref_name }}
           body: |
-            ## VideoAudioToText ${{ github.ref_name }}
+            ## VideoAudioToText v1.0.6
 
             ### Что делает
-            - Извлечение звука из видео/аудио (MP4, AVI, MKV, MOV, WebM, MP3, WAV, M4A, OGG, FLAC)
-            - Распознавание речи (faster-whisper, CPU)
-            - Перевод на выбранный язык (Google Translate, по умолчанию — английский)
-            - Сохранение 4 файлов: исходный текст (SRT + TXT), перевод (SRT + TXT)
+            - 🎬 Извлечение звука из видео/аудио (MP4, AVI, MKV, MOV, WebM, MP3, WAV, M4A, OGG, FLAC, AAC, WMA)
+            - 🎙 Распознавание речи через faster-whisper small (CPU, int8)
+            - 🌐 Перевод через Google Translate (28 языков, по умолчанию — русский)
+            - 📄 Сохранение 4 файлов: исходный текст (SRT + TXT), перевод (SRT + TXT)
+            - ✅ Авто-загрузка модели из кэша при запуске
+            - ⚠️ Предупреждение при совпадении языка оригинала и перевода
 
             ### Downloads
             - **Windows**: `.exe` installer (NSIS)
             - **macOS Intel**: `.dmg`
-            - **macOS Apple Silicon**: `.dmg`
+            - **macOS Apple Silicon**: `.dmg` (arm64)
             - **Linux**: `.AppImage` / `.deb`
 
-            ### Требования
-            - **FFmpeg** — встроен в сборку (Windows) или устанавливается системой (macOS/Linux)
-            - **Python 3.9+** с пакетом `faster-whisper` — приложение может установить автоматически
+            ### Как пользоваться
+            1. Открой видео или аудио файл
+            2. Выбери язык оригинала (или автоопределение)
+            3. Выбери язык перевода (по умолчанию русский)
+            4. При первом запуске нажми «Загрузить модели» (~500 МБ)
+            5. Нажми «Начать распознавание»
+            6. Готово — 4 текстовых файла в папке output
+
+            ### Исправления в v1.0.6
+            - Исправлено удаление извлечённого аудио перед повторным запуском задачи (ошибка `No such file or directory`)
+            - Убран таймаут 30 минут на распознавание — длинные аудио (2+ часа) больше не «зависают»
+
+            © 2026 AndranikFutureLabs
           files: release/*
           draft: false
           prerelease: false
